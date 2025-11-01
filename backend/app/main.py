@@ -5,6 +5,14 @@ from .config import settings
 from .database import init_db, get_session
 from . import crud, models
 from .config import settings
+from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordRequestForm
+from sqlmodel import Session
+
+from .config import settings
+from .database import init_db, get_session
+from . import crud, models
+from .auth import create_access_token, get_current_active_user
 
 app = FastAPI(title=settings.PROJECT_NAME)
 
@@ -59,3 +67,27 @@ def delete_label(label_id: int, session: Session = Depends(get_session)):
     if not ok:
         raise HTTPException(status_code=404, detail="Label not found")
     return {"ok": True}
+
+
+# Register user
+@app.post("/auth/register", response_model=models.UserRead)
+def register(user_in: models.UserCreate, session: Session = Depends(get_session)):
+    existing = crud.get_user_by_username(session, user_in.username)
+    if existing:
+        raise HTTPException(status_code=400, detail="Username already registered")
+    user = crud.create_user(session, user_in)
+    return models.UserRead.from_orm(user)
+
+# Login (token)
+@app.post("/auth/token")
+def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), session: Session = Depends(get_session)):
+    user = crud.authenticate_user(session, form_data.username, form_data.password)
+    if not user:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect username or password", headers={"WWW-Authenticate": "Bearer"})
+    access_token = create_access_token(data={"sub": user.username})
+    return {"access_token": access_token, "token_type": "bearer"}
+
+# Protected example
+@app.get("/api/me", response_model=models.UserRead)
+def read_users_me(current_user: models.User = Depends(get_current_active_user)):
+    return models.UserRead.from_orm(current_user)

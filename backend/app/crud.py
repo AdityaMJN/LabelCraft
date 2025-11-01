@@ -1,5 +1,8 @@
 from sqlmodel import Session, select
-from .models import Label, LabelCreate, LabelUpdate
+from .models import Label, LabelCreate, LabelUpdate, User, UserCreate
+
+from passlib.context import CryptContext
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 def create_label(session: Session, label_in: LabelCreate) -> Label:
@@ -37,4 +40,31 @@ def delete_label(session: Session, label_id: int) -> bool:
         return False
     session.delete(label)
     session.commit()
-    return True
+    return TrueUserCreate
+
+def get_password_hash(password: str) -> str:
+    return pwd_context.hash(password)
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    return pwd_context.verify(plain_password, hashed_password)
+
+# --- user CRUD
+
+def get_user_by_username(session: Session, username: str) -> User | None:
+    return session.exec(select(User).where(User.username == username)).first()
+
+def create_user(session: Session, user_in: UserCreate) -> User:
+    hashed = get_password_hash(user_in.password)
+    user = User(username=user_in.username, email=user_in.email, hashed_password=hashed)
+    session.add(user)
+    session.commit()
+    session.refresh(user)
+    return user
+
+def authenticate_user(session: Session, username: str, password: str) -> User | None:
+    user = get_user_by_username(session, username)
+    if not user:
+        return None
+    if not verify_password(password, user.hashed_password):
+        return None
+    return user

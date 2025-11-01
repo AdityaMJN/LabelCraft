@@ -5,3 +5,6 @@ sqlmodel
 python-dotenv
 httpx
 alembic
+python-jose[cryptography]
+passlib[bcrypt]
+
