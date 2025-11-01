@@ -5,7 +5,7 @@ from pathlib import Path
 
 class Settings(BaseSettings):
     PROJECT_NAME: str = "LabelCraft Backend"
-    DATABASE_URL: str = f"sqlite:///{Path('labelcraft.db').resolve()}"
+    DATABASE_URL: str = "postgresql+psycopg2://postgres:admin@localhost:5432/LabelCraft"
     FRONTEND_ORIGINS: list[str] = ["http://localhost:5173"]
 
 
