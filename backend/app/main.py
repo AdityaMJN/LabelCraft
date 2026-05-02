@@ -7,7 +7,8 @@ from . import crud, models
 from .config import settings
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
-from sqlmodel import Session
+from app.api.shapes import router as shapes_router
+
 
 from .config import settings
 from .database import init_db, get_session
@@ -15,7 +16,7 @@ from . import crud, models
 from .auth import create_access_token, get_current_active_user
 
 app = FastAPI(title=settings.PROJECT_NAME)
-
+app.include_router(shapes_router)
 app.add_middleware(
 CORSMiddleware,
 allow_origins=settings.FRONTEND_ORIGINS,
