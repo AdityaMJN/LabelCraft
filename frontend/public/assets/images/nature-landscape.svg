@@ -1,0 +1,26 @@
+<svg width="300" height="200" viewBox="0 0 300 200" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="nature-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#10b981" />
+      <stop offset="50%" style="stop-color:#059669" />
+      <stop offset="100%" style="stop-color:#047857" />
+    </linearGradient>
+    <radialGradient id="sun-gradient" cx="80%" cy="20%">
+      <stop offset="0%" style="stop-color:#fbbf24" />
+      <stop offset="100%" style="stop-color:#f59e0b" />
+    </radialGradient>
+  </defs>
+  <!-- Sky -->
+  <rect width="300" height="120" fill="url(#sun-gradient)"/>
+  <!-- Mountains -->
+  <polygon points="0,120 80,80 160,100 240,70 300,90 300,200 0,200" fill="#6b7280"/>
+  <!-- Trees -->
+  <rect x="50" y="140" width="8" height="40" fill="#92400e"/>
+  <circle cx="54" cy="135" r="15" fill="#166534"/>
+  <rect x="200" y="150" width="6" height="30" fill="#92400e"/>
+  <circle cx="203" cy="145" r="12" fill="#166534"/>
+  <!-- Grass -->
+  <rect width="300" height="80" y="120" fill="url(#nature-gradient)"/>
+  <!-- Sun -->
+  <circle cx="240" cy="40" r="20" fill="#fbbf24" opacity="0.8"/>
+</svg>

@@ -44,7 +44,7 @@ export type Shape =
     };
 
 export async function fetchShapes(): Promise<Shape[]> {
-    const res = await fetch("http://localhost:8000/shapes");
+    const res = await fetch("http://localhost:8000/shapes/");
 
     if (!res.ok) {
         throw new Error("Failed to fetch shapes");

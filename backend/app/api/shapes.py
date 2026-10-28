@@ -3,6 +3,7 @@ from fastapi import APIRouter
 router = APIRouter(prefix="/shapes", tags=["Shapes"])
 
 
+@router.get("")
 @router.get("/")
 def get_shapes():
     return [

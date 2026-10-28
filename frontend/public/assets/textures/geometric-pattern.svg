@@ -1,0 +1,14 @@
+<svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <pattern id="geometric-pattern" x="0" y="0" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M20 0 L40 20 L20 40 L0 20 Z" fill="none" stroke="rgba(102, 126, 234, 0.05)" stroke-width="0.5"/>
+      <circle cx="20" cy="20" r="8" fill="none" stroke="rgba(118, 75, 162, 0.03)" stroke-width="0.3"/>
+    </pattern>
+    <linearGradient id="soft-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ffffff;stop-opacity:0.9" />
+      <stop offset="100%" style="stop-color:#f8fafc;stop-opacity:0.7" />
+    </linearGradient>
+  </defs>
+  <rect width="200" height="200" fill="url(#soft-gradient)"/>
+  <rect width="200" height="200" fill="url(#geometric-pattern)"/>
+</svg>

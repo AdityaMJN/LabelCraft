@@ -55,10 +55,38 @@ type LabelEditorProps = {
 export default function LabelEditor({ width, height, onExport }: LabelEditorProps) {
     const styles = useStyles();
     const stageRef = useRef<any>(null);
+    const editorRef = useRef<HTMLDivElement | null>(null);
     const fileInputRef = useRef<HTMLInputElement | null>(null);
 
     const [previewUrl, setPreviewUrl] = React.useState<string | null>(null);
     const [selectedId, setSelectedId] = React.useState<string | null>(null);
+    const [availableWidth, setAvailableWidth] = React.useState(width);
+
+    React.useEffect(() => {
+        let frameId = 0;
+
+        const updateAvailableWidth = () => {
+            window.cancelAnimationFrame(frameId);
+            frameId = window.requestAnimationFrame(() => {
+                const nextWidth = editorRef.current?.clientWidth || width;
+                setAvailableWidth((currentWidth) =>
+                    Math.abs(currentWidth - nextWidth) > 2 ? nextWidth : currentWidth
+                );
+            });
+        };
+
+        updateAvailableWidth();
+        window.addEventListener("resize", updateAvailableWidth);
+
+        return () => {
+            window.cancelAnimationFrame(frameId);
+            window.removeEventListener("resize", updateAvailableWidth);
+        };
+    }, [width]);
+
+    const canvasScale = Math.min(1, Math.max(0.5, (availableWidth - 24) / width));
+    const displayWidth = Math.round(width * canvasScale);
+    const displayHeight = Math.round(height * canvasScale);
 
     const [elements, setElements] = React.useState<LabelElement[]>(() => [
         {
@@ -274,12 +302,17 @@ export default function LabelEditor({ width, height, onExport }: LabelEditorProp
     }
 
     return (
-        <div className={styles.container}>
-            <div className={styles.canvasWrapper} style={{ width, height }}>
+        <div className={styles.container} ref={editorRef}>
+            <div className={styles.canvasWrapper} style={{ width: displayWidth, height: displayHeight }}>
+                <div className={styles.canvasLabel}>2D Canvas</div>
                 <Stage
                     width={width}
                     height={height}
                     ref={stageRef}
+                    style={{
+                        transform: `scale(${canvasScale})`,
+                        transformOrigin: "top left",
+                    }}
                     onMouseDown={(e) => {
                         if (e.target === e.target.getStage()) {
                             setSelectedId(null);
@@ -395,7 +428,7 @@ export default function LabelEditor({ width, height, onExport }: LabelEditorProp
 
             <div className={styles.buttonRow}>
                 <Button
-                    appearance="primary"
+                    className={`${styles.actionButton} ${styles.primaryButton}`}
                     onClick={() =>
                         setElements((s) => [
                             ...s,
@@ -412,11 +445,11 @@ export default function LabelEditor({ width, height, onExport }: LabelEditorProp
                         ])
                     }
                 >
-                    Add Text
+                    📝 Add Text
                 </Button>
 
                 <Button
-                    appearance="secondary"
+                    className={`${styles.actionButton} ${styles.secondaryButton}`}
                     onClick={() =>
                         setElements((s) => [
                             ...s,
@@ -424,14 +457,14 @@ export default function LabelEditor({ width, height, onExport }: LabelEditorProp
                         ])
                     }
                 >
-                    Add Shape
+                    🔷 Add Shape
                 </Button>
 
                 <Button
-                    appearance="secondary"
+                    className={`${styles.actionButton} ${styles.secondaryButton}`}
                     onClick={() => fileInputRef.current?.click()}
                 >
-                    Add Image
+                    🖼️ Add Image
                 </Button>
                 <input
                     ref={fileInputRef}
@@ -441,24 +474,31 @@ export default function LabelEditor({ width, height, onExport }: LabelEditorProp
                     onChange={handleImageFile}
                 />
 
-                <Button appearance="outline" onClick={exportImage}>
-                    Export Image
+                <Button
+                    className={`${styles.actionButton} ${styles.outlineButton}`}
+                    onClick={exportImage}
+                >
+                    💾 Export Image
                 </Button>
             </div>
 
             {selectedId && (
                 <div className={styles.editorPanel}>
-                    <div style={{ marginBottom: 8, fontWeight: 600 }}>
-                        Edit selected {selectedElement?.type}
+                    <div className={styles.panelHeader}>
+                        <span className={styles.panelIcon}>
+                            {selectedElement?.type === "text" ? "📝" :
+                                selectedElement?.type === "image" ? "🖼️" : "🔷"}
+                        </span>
+                        Edit {selectedElement?.type}
                     </div>
-                    <div style={{ marginBottom: 8, color: tokens.colorNeutralForeground3 }}>
-                        Right-click on the selected item to delete it.
+                    <div className={styles.panelDescription}>
+                        Right-click on the selected item to delete it. Use the controls below to customize your element.
                     </div>
 
                     {selectedText && (
                         <>
                             <div className={styles.fieldRow}>
-                                <label>Text</label>
+                                <label className={styles.fieldLabel}>📝 Text</label>
                                 <input
                                     className={styles.textInput}
                                     type="text"
@@ -476,7 +516,7 @@ export default function LabelEditor({ width, height, onExport }: LabelEditorProp
                                 />
                             </div>
                             <div className={styles.fieldRow}>
-                                <label>Font size</label>
+                                <label className={styles.fieldLabel}>📏 Font Size</label>
                                 <input
                                     className={styles.textInput}
                                     type="number"
@@ -495,7 +535,7 @@ export default function LabelEditor({ width, height, onExport }: LabelEditorProp
                                 />
                             </div>
                             <div className={styles.fieldRow}>
-                                <label>Color</label>
+                                <label className={styles.fieldLabel}>🎨 Color</label>
                                 <input
                                     className={styles.colorInput}
                                     type="color"
@@ -513,9 +553,9 @@ export default function LabelEditor({ width, height, onExport }: LabelEditorProp
                                 />
                             </div>
                             <div className={styles.fieldRow}>
-                                <label>Font family</label>
+                                <label className={styles.fieldLabel}>🔤 Font Family</label>
                                 <select
-                                    className={styles.textInput}
+                                    className={styles.selectInput}
                                     value={selectedText.fontFamily}
                                     onChange={(e) => {
                                         const fontFamily = e.target.value;
@@ -533,6 +573,8 @@ export default function LabelEditor({ width, height, onExport }: LabelEditorProp
                                     <option value="Times New Roman">Times New Roman</option>
                                     <option value="Courier New">Courier New</option>
                                     <option value="Georgia">Georgia</option>
+                                    <option value="Impact">Impact</option>
+                                    <option value="Comic Sans MS">Comic Sans MS</option>
                                 </select>
                             </div>
                         </>
@@ -541,8 +583,9 @@ export default function LabelEditor({ width, height, onExport }: LabelEditorProp
                     {selectedImage && (
                         <>
                             <div className={styles.fieldRow}>
-                                <label>Invert</label>
+                                <label className={styles.fieldLabel}>🔄 Invert</label>
                                 <input
+                                    className={styles.checkboxInput}
                                     type="checkbox"
                                     checked={selectedImage.invert}
                                     onChange={(e) => {
@@ -558,9 +601,9 @@ export default function LabelEditor({ width, height, onExport }: LabelEditorProp
                                 />
                             </div>
                             <div className={styles.fieldRow}>
-                                <label>Fill mode</label>
+                                <label className={styles.fieldLabel}>📐 Fill Mode</label>
                                 <select
-                                    className={styles.textInput}
+                                    className={styles.selectInput}
                                     value={selectedImage.fillMode}
                                     onChange={(e) => {
                                         const fillMode = e.target.value as ImageElement["fillMode"];
@@ -579,8 +622,9 @@ export default function LabelEditor({ width, height, onExport }: LabelEditorProp
                                 </select>
                             </div>
                             <div className={styles.fieldRow}>
-                                <label>Keep aspect ratio</label>
+                                <label className={styles.fieldLabel}>📏 Keep Aspect Ratio</label>
                                 <input
+                                    className={styles.checkboxInput}
                                     type="checkbox"
                                     checked={selectedImage.keepAspectRatio}
                                     onChange={(e) => {
@@ -596,7 +640,7 @@ export default function LabelEditor({ width, height, onExport }: LabelEditorProp
                                 />
                             </div>
                             <div className={styles.fieldRow}>
-                                <label>Width</label>
+                                <label className={styles.fieldLabel}>↔️ Width</label>
                                 <input
                                     className={styles.textInput}
                                     type="number"
@@ -620,7 +664,7 @@ export default function LabelEditor({ width, height, onExport }: LabelEditorProp
                                 />
                             </div>
                             <div className={styles.fieldRow}>
-                                <label>Height</label>
+                                <label className={styles.fieldLabel}>↕️ Height</label>
                                 <input
                                     className={styles.textInput}
                                     type="number"
@@ -639,82 +683,6 @@ export default function LabelEditor({ width, height, onExport }: LabelEditorProp
                                                 }
                                                 return el;
                                             })
-                                        );
-                                    }}
-                                />
-                            </div>
-                            <div className={styles.fieldRow}>
-                                <label>Crop X</label>
-                                <input
-                                    className={styles.textInput}
-                                    type="number"
-                                    min={0}
-                                    value={selectedImage.crop.x}
-                                    onChange={(e) => {
-                                        const x = Number(e.target.value);
-                                        setElements((s) =>
-                                            s.map((el) =>
-                                                el.type === "image" && el.id === selectedId
-                                                    ? { ...el, crop: { ...el.crop, x } }
-                                                    : el
-                                            )
-                                        );
-                                    }}
-                                />
-                            </div>
-                            <div className={styles.fieldRow}>
-                                <label>Crop Y</label>
-                                <input
-                                    className={styles.textInput}
-                                    type="number"
-                                    min={0}
-                                    value={selectedImage.crop.y}
-                                    onChange={(e) => {
-                                        const y = Number(e.target.value);
-                                        setElements((s) =>
-                                            s.map((el) =>
-                                                el.type === "image" && el.id === selectedId
-                                                    ? { ...el, crop: { ...el.crop, y } }
-                                                    : el
-                                            )
-                                        );
-                                    }}
-                                />
-                            </div>
-                            <div className={styles.fieldRow}>
-                                <label>Crop width</label>
-                                <input
-                                    className={styles.textInput}
-                                    type="number"
-                                    min={1}
-                                    value={selectedImage.crop.width}
-                                    onChange={(e) => {
-                                        const width = Number(e.target.value);
-                                        setElements((s) =>
-                                            s.map((el) =>
-                                                el.type === "image" && el.id === selectedId
-                                                    ? { ...el, crop: { ...el.crop, width } }
-                                                    : el
-                                            )
-                                        );
-                                    }}
-                                />
-                            </div>
-                            <div className={styles.fieldRow}>
-                                <label>Crop height</label>
-                                <input
-                                    className={styles.textInput}
-                                    type="number"
-                                    min={1}
-                                    value={selectedImage.crop.height}
-                                    onChange={(e) => {
-                                        const height = Number(e.target.value);
-                                        setElements((s) =>
-                                            s.map((el) =>
-                                                el.type === "image" && el.id === selectedId
-                                                    ? { ...el, crop: { ...el.crop, height } }
-                                                    : el
-                                            )
                                         );
                                     }}
                                 />
@@ -740,45 +708,332 @@ export default function LabelEditor({ width, height, onExport }: LabelEditorProp
 
 const useStyles = makeStyles({
     container: {
-        backgroundColor: tokens.colorNeutralBackground1,
-        ...shorthands.padding("1rem"),
+        background: "linear-gradient(135deg, #ffffff 0%, #f8fafc 50%, #f1f5f9 100%)",
+        ...shorthands.padding("0.75rem"),
         ...shorthands.borderRadius(tokens.borderRadiusLarge),
-        boxShadow: tokens.shadow4,
+        boxShadow: "0 12px 40px rgba(0, 0, 0, 0.12), 0 4px 16px rgba(0, 0, 0, 0.08)",
+        border: "1px solid rgba(102, 126, 234, 0.15)",
+        position: "relative",
+        overflow: "hidden",
+        boxSizing: "border-box",
+        width: "100%",
+        maxWidth: "100%",
+        transition: "all 0.3s ease",
+        "&:hover": {
+            boxShadow: "0 16px 48px rgba(0, 0, 0, 0.15), 0 6px 20px rgba(0, 0, 0, 0.1)",
+            transform: "translateY(-2px)",
+        },
+        "&::before": {
+            content: '""',
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            height: "6px",
+            background: "linear-gradient(90deg, #667eea 0%, #764ba2 50%, #f093fb 100%)",
+            borderRadius: `${tokens.borderRadiusLarge} ${tokens.borderRadiusLarge} 0 0`,
+        },
+        "&::after": {
+            content: '""',
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: "url('/assets/textures/subtle-dots.svg')",
+            opacity: 0.03,
+            pointerEvents: "none",
+        },
     },
     canvasWrapper: {
-        ...shorthands.border("1px", "solid", tokens.colorNeutralStroke1),
-        width: "100%",
-        height: "auto",
-        marginBottom: "1rem",
+        ...shorthands.border("2px", "solid", "rgba(102, 126, 234, 0.3)"),
+        ...shorthands.borderRadius(tokens.borderRadiusLarge),
+        maxWidth: "100%",
+        marginBottom: "0.5rem",
+        background: "linear-gradient(135deg, #ffffff 0%, #f8fafc 50%, #f1f5f9 100%)",
+        boxShadow: "0 12px 32px rgba(0,0,0,0.08), 0 4px 12px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,0.8)",
+        position: "relative",
+        overflow: "hidden",
+        boxSizing: "border-box",
+        marginLeft: "auto",
+        marginRight: "auto",
+        "&::before": {
+            content: '""',
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: "url('/assets/textures/geometric-pattern.svg') repeat",
+            backgroundSize: "40px 40px",
+            opacity: 0.04,
+            pointerEvents: "none",
+        },
+        "&::after": {
+            content: '""',
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: "linear-gradient(45deg, rgba(102,126,234,0.02) 0%, rgba(240,147,251,0.02) 100%)",
+            pointerEvents: "none",
+        },
+    },
+    canvasLabel: {
+        position: "absolute",
+        top: "12px",
+        left: "12px",
+        background: "rgba(0,0,0,0.8)",
+        color: "white",
+        padding: "6px 12px",
+        borderRadius: "20px",
+        fontSize: "12px",
+        fontWeight: "600",
+        backdropFilter: "blur(10px)",
+        border: "1px solid rgba(255,255,255,0.2)",
+        zIndex: 10,
     },
     buttonRow: {
         display: "flex",
         gap: "0.5rem",
+        flexWrap: "wrap",
+        marginBottom: "0.75rem",
+        justifyContent: "center",
+    },
+    actionButton: {
+        fontWeight: tokens.fontWeightMedium,
+        ...shorthands.padding("0.5rem", "0.875rem"),
+        ...shorthands.borderRadius(tokens.borderRadiusSmall),
+        transition: "all 0.2s ease",
+        boxShadow: "0 2px 6px rgba(0, 0, 0, 0.08)",
+        border: "none",
+        cursor: "pointer",
+        fontSize: tokens.fontSizeBase200,
+        position: "relative",
+        overflow: "hidden",
+        minWidth: "auto",
+        "&::before": {
+            content: '""',
+            position: "absolute",
+            top: 0,
+            left: "-100%",
+            width: "100%",
+            height: "100%",
+            background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent)",
+            transition: "left 0.3s",
+        },
+        "&:hover": {
+            transform: "translateY(-1px)",
+            boxShadow: "0 4px 12px rgba(0, 0, 0, 0.12)",
+            "&::before": {
+                left: "100%",
+            },
+        },
+        "&:active": {
+            transform: "translateY(0px)",
+        },
+    },
+    primaryButton: {
+        background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+        color: "white",
+        border: "none",
+    },
+    secondaryButton: {
+        background: "white",
+        color: "#667eea",
+        border: "2px solid #667eea",
+    },
+    outlineButton: {
+        background: "transparent",
+        color: "#64748b",
+        border: "2px solid #e2e8f0",
     },
     editorPanel: {
-        marginTop: "1rem",
+        background: "linear-gradient(135deg, #ffffff 0%, #f8fafc 50%, #f1f5f9 100%)",
+        ...shorthands.padding("1rem"),
+        ...shorthands.borderRadius(tokens.borderRadiusLarge),
+        border: "1px solid rgba(102, 126, 234, 0.2)",
+        boxShadow: "0 16px 48px rgba(0,0,0,0.08), 0 6px 20px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,0.9)",
+        position: "relative",
+        overflow: "hidden",
+        transition: "all 0.3s ease",
+        "&:hover": {
+            boxShadow: "0 20px 56px rgba(0,0,0,0.12), 0 8px 24px rgba(0,0,0,0.06)",
+            transform: "translateY(-1px)",
+        },
+        "&::before": {
+            content: '""',
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            height: "6px",
+            background: "linear-gradient(90deg, #667eea 0%, #764ba2 50%, #f093fb 100%)",
+            borderRadius: `${tokens.borderRadiusLarge} ${tokens.borderRadiusLarge} 0 0`,
+        },
+        "&::after": {
+            content: '""',
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: "url('/assets/textures/subtle-dots.svg')",
+            opacity: 0.04,
+            pointerEvents: "none",
+        },
+    },
+    panelHeader: {
+        fontSize: tokens.fontSizeBase400,
+        fontWeight: tokens.fontWeightSemibold,
+        color: "#1e293b",
+        marginBottom: "0.5rem",
         display: "flex",
-        flexDirection: "column",
-        gap: "0.75rem",
+        alignItems: "center",
+        gap: "0.5rem",
+    },
+    panelIcon: {
+        fontSize: "1.25rem",
+    },
+    panelDescription: {
+        fontSize: tokens.fontSizeBase200,
+        color: "#64748b",
+        marginBottom: "1rem",
     },
     fieldRow: {
         display: "grid",
-        gridTemplateColumns: "140px 1fr",
-        gap: "0.5rem",
+        gridTemplateColumns: "160px 1fr",
+        gap: "1rem",
         alignItems: "center",
+        marginBottom: "1.25rem",
+        ...shorthands.padding("1rem"),
+        background: "linear-gradient(135deg, rgba(255, 255, 255, 0.8) 0%, rgba(248, 250, 252, 0.8) 100%)",
+        ...shorthands.borderRadius(tokens.borderRadiusMedium),
+        border: "1px solid rgba(102, 126, 234, 0.08)",
+        transition: "all 0.3s ease",
+        position: "relative",
+        "&:hover": {
+            background: "linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(248, 250, 252, 0.9) 100%)",
+            border: "1px solid rgba(102, 126, 234, 0.15)",
+            transform: "translateY(-1px)",
+            boxShadow: "0 4px 12px rgba(102, 126, 234, 0.08)",
+        },
+        "&::before": {
+            content: '""',
+            position: "absolute",
+            left: 0,
+            top: 0,
+            bottom: 0,
+            width: "4px",
+            background: "linear-gradient(180deg, #667eea 0%, #764ba2 100%)",
+            borderRadius: `${tokens.borderRadiusMedium} 0 0 ${tokens.borderRadiusMedium}`,
+        },
+    },
+    fieldLabel: {
+        fontSize: tokens.fontSizeBase300,
+        fontWeight: tokens.fontWeightMedium,
+        color: "#374151",
     },
     textInput: {
-        padding: "0.5rem",
-        border: `1px solid ${tokens.colorNeutralStroke1}`,
+        ...shorthands.padding("0.75rem", "1rem"),
+        border: `2px solid #e2e8f0`,
         borderRadius: tokens.borderRadiusMedium,
         width: "100%",
-        fontSize: "1rem",
+        fontSize: tokens.fontSizeBase300,
+        transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+        background: "linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)",
+        boxShadow: "inset 0 1px 3px rgba(0, 0, 0, 0.1)",
+        "&:focus": {
+            outline: "none",
+            border: "2px solid #667eea",
+            boxShadow: "0 0 0 4px rgba(102, 126, 234, 0.1), inset 0 1px 3px rgba(0, 0, 0, 0.1)",
+            transform: "scale(1.01)",
+            background: "linear-gradient(135deg, #ffffff 0%, #f1f5f9 100%)",
+        },
+        "&:hover": {
+            border: "2px solid #cbd5e1",
+            boxShadow: "0 0 0 2px rgba(203, 213, 225, 0.2), inset 0 1px 3px rgba(0, 0, 0, 0.1)",
+        },
     },
     colorInput: {
-        width: "4rem",
-        height: "2rem",
-        border: `1px solid ${tokens.colorNeutralStroke1}`,
+        width: "4.5rem",
+        height: "3rem",
+        border: `2px solid #e2e8f0`,
         borderRadius: tokens.borderRadiusMedium,
         padding: "0",
+        cursor: "pointer",
+        transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+        background: "linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)",
+        boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)",
+        "&:hover": {
+            border: "2px solid #667eea",
+            transform: "scale(1.05) rotate(2deg)",
+            boxShadow: "0 4px 16px rgba(102, 126, 234, 0.2)",
+        },
+        "&:active": {
+            transform: "scale(0.95) rotate(0deg)",
+        },
+    },
+    checkboxInput: {
+        width: "1.5rem",
+        height: "1.5rem",
+        cursor: "pointer",
+        accentColor: "#667eea",
+        borderRadius: "4px",
+        transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+        "&:hover": {
+            transform: "scale(1.1)",
+            filter: "drop-shadow(0 2px 8px rgba(102, 126, 234, 0.3))",
+        },
+        "&:checked": {
+            background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+            border: "2px solid #667eea",
+        },
+    },
+    selectInput: {
+        ...shorthands.padding("0.75rem", "1rem"),
+        border: `2px solid #e2e8f0`,
+        borderRadius: tokens.borderRadiusMedium,
+        width: "100%",
+        fontSize: tokens.fontSizeBase300,
+        background: "linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)",
+        cursor: "pointer",
+        transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+        boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)",
+        "&:focus": {
+            outline: "none",
+            border: "2px solid #667eea",
+            boxShadow: "0 0 0 4px rgba(102, 126, 234, 0.1), 0 2px 8px rgba(0, 0, 0, 0.1)",
+            transform: "scale(1.01)",
+            background: "linear-gradient(135deg, #ffffff 0%, #f1f5f9 100%)",
+        },
+        "&:hover": {
+            border: "2px solid #cbd5e1",
+            boxShadow: "0 0 0 2px rgba(203, 213, 225, 0.2), 0 2px 8px rgba(0, 0, 0, 0.1)",
+        },
+    },
+    previewContainer: {
+        marginTop: "1.5rem",
+        ...shorthands.padding("1rem"),
+        background: "linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)",
+        ...shorthands.borderRadius(tokens.borderRadiusMedium),
+        border: "2px solid rgba(102, 126, 234, 0.1)",
+    },
+    previewTitle: {
+        fontSize: tokens.fontSizeBase300,
+        fontWeight: tokens.fontWeightSemibold,
+        color: "#1e293b",
+        marginBottom: "0.75rem",
+        display: "flex",
+        alignItems: "center",
+        gap: "0.5rem",
+    },
+    previewImage: {
+        maxWidth: "100%",
+        height: "auto",
+        ...shorthands.borderRadius(tokens.borderRadiusMedium),
+        boxShadow: "0 4px 16px rgba(0, 0, 0, 0.1)",
+        border: "2px solid rgba(102, 126, 234, 0.2)",
     },
 });
